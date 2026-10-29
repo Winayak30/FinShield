@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.system.id="pyproject.toml" type="PYTHON_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$/finshield-backend">
+      <sourceFolder url="file://$MODULE_DIR$/finshield-backend/src" />
+      <excludeFolder url="file://$MODULE_DIR$/finshield-backend/.venv" />
+    </content>
+    <orderEntry type="jdk" jdkName="D:\FinShield\FinShield\.venv" jdkType="Python SDK" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
