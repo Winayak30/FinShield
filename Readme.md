@@ -220,7 +220,7 @@ Contributions should follow the project's shared API schemas, typed contracts, t
 
 The Software Requirements Specification (SRS) defines the functional requirements, non-functional requirements, architecture baseline, acceptance scenarios, and mapping of the 16 EPAM learning topics.
 
----
+
 
 **FinShield — Secure payments through intelligent risk assessment, explainable investigations, and human oversight.**
 
