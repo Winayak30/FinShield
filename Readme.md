@@ -1,103 +1,100 @@
-# 🛡️ FinShield: Pre-Payment Safety Layer for Digital Payments
+# FinShield: Pre-Payment Safety Layer for Digital Payments
 
-> **Detect. Investigate. Protect.** 
-> An AI-assisted, privacy-first platform that detects and prevents Authorised Push Payment (APP) fraud, "digital arrests", and remote-access scams *before* the transaction clears the banking rails.
+> An AI-assisted, privacy-first platform that aims to detect and prevent Authorised Push Payment
+> (APP) fraud, "digital arrests" and remote-access scams *before* the transaction clears.
 
-## 📖 Overview
-FinShield sits between a user's payment application and the core banking/UPI switch. It evaluates real-time contextual signals (transaction velocity, device compromise, screen mirroring) to block coerced payments. 
+**Status: Stage 1.5 (foundation).** This is a walking skeleton. The API contract is defined and
+tested, but **all endpoints are stubs**. See [What is built](#what-is-built-and-what-is-not).
 
-Unlike traditional fraud engines that look at past losses, FinShield operates a **Dual-Path Architecture**:
-1. **Fast Path (<50ms p95):** A deterministic, Redis-backed rule engine that never blocks the UPI rails.
-2. **Tribunal Path (Async):** A LangGraph-powered multi-agent system that deeply investigates flagged transactions using privacy-safe Model Context Protocol (FastMCP) tools, ultimately routing to a Trusted Nominee for cryptographic approval.
+## Target design (not yet implemented)
 
----
+FinShield sits between a payment app and the banking/UPI switch with a dual-path architecture:
 
-## 🛑 Non-Negotiable Core Principles
-As defined in our engineering pipeline, the following rules govern this repository:
-1. **Deterministic Money:** The rules engine decides on money. The LLM only investigates and explains.
-2. **Fail Closed (High Value):** If data is missing (Redis/Baseline outage), high-value payments are HELD; low-value defaults to STEP_UP.
-3. **Agent Boundaries:** Agents can only *raise* risk. They never release, freeze, or block.
-4. **Zero Raw LLM Data:** All PII is masked first, wrapped in delimiters, and queried via read-only FastMCP tools.
-5. **Exactly-Once Release:** Atomic state transitions + transactional outbox + idempotency keys.
-6. **100% Replayable Decisions:** Policy version and input hash are stored for every single evaluation.
+1. **Fast Path (<50ms p95 target):** deterministic, Redis-backed rules engine.
+2. **Tribunal Path (async):** LangGraph multi-agent investigation over read-only FastMCP tools,
+   routing to a Trusted Nominee for cryptographically bound approval.
 
----
+Core principles the design commits to:
 
-## 🛠️ Technology Stack
-**Fully Python-Native Backend Pipeline:**
-* **Core Framework:** Python 3.12+, FastAPI, Pydantic v2
-* **Database & ORM:** PostgreSQL, SQLAlchemy 2.0 (Async) + Alembic
-* **Cache & Queues:** Redis, ARQ (Async Redis Queue)
-* **AI Orchestration:** LangGraph, LangChain, FastMCP
-* **Observability & Testing:** OpenTelemetry, Pytest (asyncio, benchmark)
-* **Frontend (Nominee/Analyst):** React + Vite
-* **Infrastructure:** Docker Compose
+1. **Deterministic money:** the rules engine decides; the LLM only investigates and explains.
+2. **Fail closed (high value):** missing data holds high-value payments; low-value defaults to STEP_UP.
+3. **Agent boundaries:** agents can only *raise* risk; they never release, freeze or block.
+4. **Zero raw LLM data:** PII is masked first and reached only via read-only FastMCP tools.
+5. **Exactly-once release:** atomic state transitions, transactional outbox, idempotency keys.
+6. **Replayable decisions:** `policy_version` and `input_hash` are returned for every evaluation.
 
----
+## What is built and what is not
 
-## 📂 Repository Structure (Stage 0)
+| Area | Status |
+|---|---|
+| FastAPI app, 3 endpoints, Pydantic v2 contract (`src/main.py`, `src/schemas.py`) | Built, **stub responses** |
+| `/v1/payments/evaluate` always returns `HOLD` (score 0.85) with `STUB:` reasons | **Stub**, no rules |
+| `input_hash` (sha256 of canonical decision inputs, excludes `idempotency_key`) | Built |
+| `policy_version` from settings (`FINSHIELD_POLICY_VERSION`) | Built |
+| Settings, PII-masking log filter, error model (`src/core/`) | Built |
+| Contract tests (`tests/contract/`) | Built |
+| Docker Compose: Postgres 16 + Redis 7 with volumes and healthchecks | Built, **not used by the app yet** |
+| Rules engine, velocity, Redis (`src/engine/`) | Not built (empty package) |
+| Postgres models, hold state machine, outbox, idempotency enforcement (`src/state/`) | Not built (empty package) |
+| PASETO tokens, OTP/token validation (`src/security/`) | Not built (empty package); `token` and `simulated_otp` are only format-checked |
+| FastMCP read-only tools (`src/mcp_server/`) | Not built (empty package) |
+| LangGraph Tribunal and eval harness (`finshield-agent/`) | Not built |
+| Frontend (`finshield-frontend/`) | Not started |
+| Alembic, ARQ, OpenTelemetry | Not added |
+
+Nothing is persisted: `GET /v1/holds/{id}` returns synthetic data for any ID.
+
+## Repository layout
 
 ```text
-finshield/
-├── src/
-│   ├── api/                 # FastAPI routes (Fast Path ingress)
-│   ├── core/                # Pydantic schemas, config, idempotency
-│   ├── security/            # PII sanitizer, signature validation, tokens
-│   ├── engine/              # Deterministic risk scoring, Redis Lua scripts
-│   ├── state/               # Hold state machine, PostgreSQL atomic transitions
-│   ├── agents/              # LangGraph Tribunal, nodes, and Explainer
-│   └── mcp_server/          # FastMCP read-only tools for agents
-├── tests/
-│   ├── contract/            # Frozen schema API tests
-│   ├── engine/              # Fast-path <50ms benchmarks
-│   └── evals/               # Adversarial LLM testing & instruction adherence
-├── docker-compose.yml       # Local infrastructure (Postgres, Redis, Workers)
-└── pyproject.toml           # Dependencies and build config
+FinShield/
+├── Readme.md
+├── .gitignore
+├── finshield-backend/
+│   ├── pyproject.toml, uv.lock, docker-compose.yml, .env.example
+│   ├── src/
+│   │   ├── main.py          # app entry: src.main:app
+│   │   ├── schemas.py       # API contract
+│   │   ├── core/            # config, logging (PII masking), errors
+│   │   ├── engine/          # (empty) rules and velocity
+│   │   ├── state/           # (empty) Postgres models, state machine, outbox
+│   │   ├── security/        # (empty) PASETO token service
+│   │   └── mcp_server/      # (empty) read-only FastMCP tools
+│   └── tests/contract/
+├── finshield-agent/         # LangGraph Tribunal + evals; consumes data ONLY via the MCP server
+└── finshield-frontend/      # not started
 ```
 
----
+## Quick start
 
-## 🚀 Quick Start (Local Development)
+Prerequisites: Python 3.12+, [uv](https://docs.astral.sh/uv/), Docker (only for Postgres/Redis).
 
-### 1. Prerequisites
-* Docker and Docker Compose installed.
-* Python 3.12+ installed.
-* `pip` or `poetry` for dependency management.
-
-### 2. Environment Setup
-Clone the repository and set up your virtual environment:
 ```bash
-git clone https://github.com/your-org/finshield.git
-cd finshield
-python -m venv venv
-source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-pip install -r requirements.txt
+cd finshield-backend
+uv sync
+uv run uvicorn src.main:app --reload
 ```
 
-### 3. Spin Up Infrastructure
-Start the local PostgreSQL, Redis, and worker instances:
+Open <http://localhost:8000/docs> for Swagger UI.
+
+Run tests and lint:
+
 ```bash
+uv run pytest
+uv run ruff check
+```
+
+Optional infrastructure (not yet used by the API):
+
+```bash
+cp .env.example .env      # then edit the values
 docker compose up -d
 ```
 
-### 4. Run the API Server
-Start the FastAPI ingress server with hot-reloading:
-```bash
-uvicorn src.api.main:app --reload --port 8000
-```
-Visit `http://localhost:8000/docs` to view the OpenAPI Swagger UI.
+## API contract notes (Stage 1.5)
 
----
-
-## 👥 Workstreams & Ownership (EPAM 16-Topic Track)
-The project is divided into 5 independent workstreams to parallelize development and meet EPAM curriculum requirements:
-1. **Core Engine:** Fast Path, OpenAPI contracts, <50ms benchmarks.
-2. **Agents & MCP:** LangGraph Tribunal, parallel routing, FastMCP tools.
-3. **Security & State Machine:** Idempotency, PASETO token binding, PII sanitizer, atomic Outbox.
-4. **Frontend:** React-based Nominee approval and Fraud Analyst console.
-5. **Evals & DevOps:** CI/CD, adversarial testing, OpenTelemetry, threshold sweeping.
-
-*(Refer to internal documentation for assigned owners per workstream).*
-
----
-*Built for the EPAM 16-Topic Track by Team Prism.*
+- Money is an integer in paise: `amount_paise` (> 0). Float amounts are gone.
+- `verdict` is one of `ALLOW`, `STEP_UP`, `HOLD`, `BLOCK`.
+- Both responses use `reasons` (not `risk_reasons`).
+- `input_hash` covers the decision inputs only; `idempotency_key` is transport metadata and is excluded.
+- VPAs match `handle@psp`; `simulated_otp` is exactly 6 ASCII digits.
