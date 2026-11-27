@@ -5,6 +5,7 @@ description = "FinShield backend: pre-payment safety layer API (Stage 1.5 founda
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.162.0",
+    "fastmcp>=4.2.6",
     "pydantic>=2.14.3",
     "pydantic-settings>=2.16.2",
     "uvicorn[standard]>=0.54.0",
